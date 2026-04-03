@@ -25,13 +25,15 @@ pipeline {
         sh 'npm install & npm run build'
     }
 }
-        stage('JENKINS TO NEXUS') {
-        steps {
-          withMaven(jdk: 'jdk21', nodejs: 'node23', traceability: true) {
-             sh 'npm deploy'
-}
+       stage('JENKINS TO NEXUS') {
+    steps {
+        withMaven(jdk: 'jdk21', nodejs: 'node23', traceability: true) {
+            sh 'npm install'
+            sh 'npm run build'
+            sh 'npm run deploy'
         }
     }
+}
         stage('SonarQube Analysis') {
     steps {
         withSonarQubeEnv("${SONARQUBE_ENV}") {
