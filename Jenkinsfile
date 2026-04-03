@@ -20,9 +20,11 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/rajeshtutta/zomato.git'
             }
         }
-        stage('BUILD') {
-        steps {
-            sh 'npm clean package -DskipTests'
+        stage('Install & Build') {
+    steps {
+        sh 'npm install & npm run build'
+    }
+}
         }
     }
         stage('JENKINS TO NEXUS') {
@@ -33,12 +35,19 @@ pipeline {
         }
     }
         stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    sh 'npm sonar:sonar'
-                }
-            }
+    steps {
+        withSonarQubeEnv("${SONARQUBE_ENV}") {
+            sh '''
+            npm install -g sonar-scanner
+            sonar-scanner \
+              -Dsonar.projectKey=zomato \
+              -Dsonar.sources=src \
+              -Dsonar.host.url=$SONAR_HOST_URL \
+              -Dsonar.login=$SONAR_AUTH_TOKEN
+            '''
         }
+    }
+}
 
         stage('Quality Gate') {
             steps {
