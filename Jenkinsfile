@@ -25,14 +25,6 @@ pipeline {
         sh 'npm install && npm run build'
     }
 }
-stage('JENKINS TO NEXUS') {
-    steps {
-        withMaven(jdk: 'jdk21', traceability: true) {
-            sh 'npm install'
-            sh 'npm run build'
-        }
-    }
-}
         stage('Package Artifact') {
     steps {
         sh 'zip -r zomato-build.zip build/'
@@ -48,7 +40,7 @@ stage('JENKINS TO NEXUS') {
             sh '''
             curl -v -u $NEXUS_USER:$NEXUS_PASS \
             --upload-file zomato-build.zip \
-            http:44.203.55.56:8081/repository/raw-hosted/zomato-build.zip
+            http://44.203.55.56:8081/repository/raw-hosted/zomato-build.zip
             '''
         }
     }
