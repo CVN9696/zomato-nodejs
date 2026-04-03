@@ -20,14 +20,15 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/rajeshtutta/zomato.git'
             }
         }
-        stage('Install & Build') {
+       stage('Install & Build') {
     steps {
-        sh 'npm install & npm run build'
+        sh 'npm install && npm run build'
     }
 }
-       stage('JENKINS TO NEXUS') {
+
+stage('JENKINS TO NEXUS') {
     steps {
-        withMaven(jdk: 'jdk21', nodejs: 'node23', traceability: true) {
+        withMaven(jdk: 'jdk21', traceability: true) {
             sh 'npm install'
             sh 'npm run build'
             sh 'npm run deploy'
