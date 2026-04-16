@@ -30,21 +30,7 @@ pipeline {
         sh 'zip -r zomato-build.zip build/'
     }
 }
-        stage('Upload to Nexus') {
-    steps {
-        withCredentials([usernamePassword(
-            credentialsId: 'nexus-cred',
-            usernameVariable: 'NEXUS_USER',
-            passwordVariable: 'NEXUS_PASS'
-        )]) {
-            sh '''
-            curl -v -u $NEXUS_USER:$NEXUS_PASS \
-            --upload-file zomato-build.zip \
-            http://44.203.55.56:8081/repository/raw-hosted/zomato-build.zip
-            '''
-        }
-    }
-}
+       
         stage('SonarQube Analysis') {
     steps {
         withSonarQubeEnv("${SONARQUBE_ENV}") {
@@ -67,7 +53,21 @@ pipeline {
                 }
             }
         }
-
+       stage('Upload to Nexus') {
+           steps {
+          withCredentials([usernamePassword(
+            credentialsId: 'nexus-cred',
+            usernameVariable: 'NEXUS_USER',
+            passwordVariable: 'NEXUS_PASS'
+        )]) {
+            sh '''
+            curl -v -u $NEXUS_USER:$NEXUS_PASS \
+            --upload-file zomato-build.zip \
+            http://44.203.55.56:8081/repository/raw-hosted/zomato-build.zip
+            '''
+        }
+    }
+}
 
         stage('Build Docker Image') {
             steps {
