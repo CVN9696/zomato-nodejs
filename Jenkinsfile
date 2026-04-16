@@ -1,9 +1,10 @@
 pipeline {
     agent any
     tools {
-        jdk 'jdk21'
-        nodejs 'node23'
-    }
+    jdk 'jdk21'
+    nodejs 'node23'
+    sonarQubeScanner 'sonar-scanner'
+}
 
     environment {
         SONARQUBE_ENV = 'sq'
@@ -31,16 +32,15 @@ pipeline {
     }
 }
        
-        stage('SonarQube Analysis') {
+       stage('SonarQube Analysis') {
     steps {
         withSonarQubeEnv("${SONARQUBE_ENV}") {
             sh '''
-            npm install -g sonar-scanner
             sonar-scanner \
               -Dsonar.projectKey=zomato \
               -Dsonar.sources=src \
-              -Dsonar.host.url=$SONAR_HOST_URL \
-              -Dsonar.login=$SONAR_AUTH_TOKEN
+              -Dsonar.projectName=Zomato-App \
+              -Dsonar.projectVersion=${BUILD_NUMBER}
             '''
         }
     }
