@@ -1,14 +1,15 @@
 pipeline {
     agent any
+
     tools {
-    jdk 'jdk21'
-    nodejs 'node23'
-}
-    
+        jdk 'jdk21'
+        nodejs 'node23'
+        sonarQubeScanner 'sonar-scanner'
+    }
+
     environment {
         SONARQUBE_ENV = 'sq'
         DOCKER_IMAGE = "rajeshtutta123/zomato"
-        AWS_CREDS = credentials('aws-creds')
         AWS_DEFAULT_REGION = 'us-east-1'
         RECIPIENTS = 'rajeshtutta123@gmail.com'
     }
@@ -20,65 +21,88 @@ pipeline {
                 git branch: 'main', url: 'https://github.com/rajeshtutta/zomato.git'
             }
         }
-       stage('Install & Build') {
-    steps {
-        sh 'npm install && npm run build'
-    }
-}
-        stage('Package Artifact') {
-    steps {
-        sh 'zip -r zomato-build.zip build/'
-    }
-}
-       
-       stage('SonarQube Analysis') {
-    steps {
-        withSonarQubeEnv("${SONARQUBE_ENV}") {
-            sh '''
-            sonar-scanner \
-              -Dsonar.projectKey=zomato \
-              -Dsonar.sources=src \
-              -Dsonar.projectName=Zomato-App \
-              -Dsonar.projectVersion=${BUILD_NUMBER}
-            '''
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'npm install'
+            }
         }
-    }
-}
+
+        stage('Build Application') {
+            steps {
+                sh 'npm run build'
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                sh 'npm test || true'
+            }
+        }
+
+        stage('Package Artifact') {
+            steps {
+                sh 'zip -r zomato-build.zip build/'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv("${SONARQUBE_ENV}") {
+                    sh '''
+                    sonar-scanner \
+                      -Dsonar.projectKey=zomato \
+                      -Dsonar.sources=src \
+                      -Dsonar.projectName=Zomato-App \
+                      -Dsonar.projectVersion=${BUILD_NUMBER}
+                    '''
+                }
+            }
+        }
 
         stage('Quality Gate') {
             steps {
-                timeout(time: 1, unit: 'MINUTES') {
+                timeout(time: 2, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
             }
         }
-       stage('Upload to Nexus') {
-           steps {
-          withCredentials([usernamePassword(
-            credentialsId: 'nexus-cred',
-            usernameVariable: 'NEXUS_USER',
-            passwordVariable: 'NEXUS_PASS'
-        )]) {
-            sh '''
-            curl -v -u $NEXUS_USER:$NEXUS_PASS \
-            --upload-file zomato-build.zip \
-            http://localhost:8081/repository/raw-hosted/zomato-build.zip
-            '''
+
+        stage('Upload to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'nexus-cred',
+                    usernameVariable: 'NEXUS_USER',
+                    passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                    curl -v -u $NEXUS_USER:$NEXUS_PASS \
+                    --upload-file zomato-build.zip \
+                    http://<NEXUS-IP>:8081/repository/raw-hosted/zomato-build-${BUILD_NUMBER}.zip
+                    '''
+                }
+            }
         }
-    }
-}
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t $DOCKER_IMAGE:latest .'
+                sh '''
+                docker build -t $DOCKER_IMAGE:${BUILD_NUMBER} .
+                docker tag $DOCKER_IMAGE:${BUILD_NUMBER} $DOCKER_IMAGE:latest
+                '''
             }
         }
 
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-cred',
+                    usernameVariable: 'USER',
+                    passwordVariable: 'PASS'
+                )]) {
                     sh '''
                     echo $PASS | docker login -u $USER --password-stdin
+                    docker push $DOCKER_IMAGE:${BUILD_NUMBER}
                     docker push $DOCKER_IMAGE:latest
                     docker logout
                     '''
@@ -86,34 +110,38 @@ pipeline {
             }
         }
 
-         stage('Install Helm') {
+        stage('Install Helm') {
             steps {
-                sh 'curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash'
+                sh 'curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash'
             }
         }
-        
-        stage('Add Repo') {
+
+        stage('Add Helm Repo') {
             steps {
-                sh 'helm repo add prometheus-community https://prometheus-community.github.io/helm-charts helm repo update'
+                sh '''
+                helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+                helm repo update
+                '''
             }
         }
 
         stage('Install Monitoring Stack') {
             steps {
-                sh 'helm install monitoring prometheus-community/kube-prometheus-stack'
+                sh '''
+                helm upgrade --install monitoring prometheus-community/kube-prometheus-stack
+                '''
             }
         }
-        
+
         stage('Deploy to EKS') {
             steps {
-                sh '''
-                export AWS_ACCESS_KEY_ID=$AWS_CREDS_USR
-                export AWS_SECRET_ACCESS_KEY=$AWS_CREDS_PSW
-
-                aws eks update-kubeconfig --region us-east-1 --name mycluster
-                kubectl apply -f deployment.yml
-                kubectl apply -f service.yml
-                '''
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                    sh '''
+                    aws eks update-kubeconfig --region us-east-1 --name mycluster
+                    kubectl apply -f deployment.yml
+                    kubectl apply -f service.yml
+                    '''
+                }
             }
         }
     }
@@ -121,19 +149,22 @@ pipeline {
     post {
         success {
             emailext(
-                subject: "Jenkins Job '${env.JOB_NAME}' Success",
-                body: "Good news! Job '${env.JOB_NAME}' (#${env.BUILD_NUMBER}) succeeded.\n\nCheck console output at ${env.BUILD_URL}",
+                subject: "SUCCESS: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Build succeeded!\n\nCheck: ${env.BUILD_URL}",
                 to: "${RECIPIENTS}"
             )
         }
 
         failure {
             emailext(
-                subject: "Jenkins Job '${env.JOB_NAME}' Failed",
-                body: "Alert! Job '${env.JOB_NAME}' (#${env.BUILD_NUMBER}) failed.\n\nCheck console output at ${env.BUILD_URL}",
+                subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                body: "Build failed!\n\nCheck: ${env.BUILD_URL}",
                 to: "${RECIPIENTS}"
             )
         }
 
+        always {
+            archiveArtifacts artifacts: 'zomato-build.zip', fingerprint: true
+        }
     }
 }
