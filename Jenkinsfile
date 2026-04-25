@@ -139,7 +139,8 @@ stage('Add Helm Repo') {
 
 stage('Install Monitoring Stack') {
     steps {
-        sh './helm install monitoring prometheus-community/kube-prometheus-stack'
+        // sh './helm install monitoring prometheus-community/kube-prometheus-stack'
+        sh './helm upgrade --install monitoring prometheus-community/kube-prometheus-stack'
     }
 }
 
