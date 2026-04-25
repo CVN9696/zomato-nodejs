@@ -5,7 +5,7 @@ pipeline {
         jdk 'jdk21'
         nodejs 'node23'
         sonarScanner 'SonarScanner'
-    }
+ }
 
     environment {
         SONARQUBE_ENV = 'SonarQube'
