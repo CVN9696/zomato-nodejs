@@ -147,7 +147,7 @@ stage('Install Monitoring Stack') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                     sh '''
-                    aws eks update-kubeconfig --region us-east-1 --name mycluster
+                    aws eks update-kubeconfig --region us-west-1 --name mycluster
                     kubectl apply -f deployment.yml
                     kubectl apply -f service.yml
                     '''
