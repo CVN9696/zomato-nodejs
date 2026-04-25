@@ -113,36 +113,36 @@ pipeline {
             }
         }
 
-        stage('Install Helm') {
-             steps {
-                 sh '''
-               curl -LO https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
-               tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
-               mv linux-amd64/helm helm
-               chmod +x helm
-               '''
-            }
-        }
+//         stage('Install Helm') {
+//              steps {
+//                  sh '''
+//                curl -LO https://get.helm.sh/helm-v3.14.0-linux-amd64.tar.gz
+//                tar -zxvf helm-v3.14.0-linux-amd64.tar.gz
+//                mv linux-amd64/helm helm
+//                chmod +x helm
+//                '''
+//             }
+//         }
         
-        stage('Verify Helm') {
-    steps {
-        sh './helm version'
-    }
-}
+//         stage('Verify Helm') {
+//     steps {
+//         sh './helm version'
+//     }
+// }
 
-stage('Add Helm Repo') {
-    steps {
-        sh './helm repo add prometheus-community https://prometheus-community.github.io/helm-charts'
-        sh './helm repo update'
-    }
-}
+// stage('Add Helm Repo') {
+//     steps {
+//         sh './helm repo add prometheus-community https://prometheus-community.github.io/helm-charts'
+//         sh './helm repo update'
+//     }
+// }
 
-stage('Install Monitoring Stack') {
-    steps {
-        // sh './helm install monitoring prometheus-community/kube-prometheus-stack'
-        sh './helm upgrade --install monitoring prometheus-community/kube-prometheus-stack'
-    }
-}
+// stage('Install Monitoring Stack') {
+//     steps {
+//         // sh './helm install monitoring prometheus-community/kube-prometheus-stack'
+//         sh './helm upgrade --install monitoring prometheus-community/kube-prometheus-stack'
+//     }
+// }
 
         stage('Deploy to EKS') {
             steps {
