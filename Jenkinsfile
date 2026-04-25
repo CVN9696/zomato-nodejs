@@ -46,18 +46,22 @@ pipeline {
         }
 
         stage('SonarQube Analysis') {
-            steps {
-                withSonarQubeEnv("${SONARQUBE_ENV}") {
-                    sh '''
-                    sonar-scanner \
-                      -Dsonar.projectKey=zomato \
-                      -Dsonar.sources=src \
-                      -Dsonar.projectName=Zomato-App \
-                      -Dsonar.projectVersion=${BUILD_NUMBER}
-                    '''
-                }
+    steps {
+        script {
+            def scannerHome = tool 'SonarScanner'
+
+            withSonarQubeEnv('SonarQube') {
+                sh """
+                ${scannerHome}/bin/sonar-scanner \
+                -Dsonar.projectKey=zomato \
+                -Dsonar.projectName=Zomato-App \
+                -Dsonar.sources=src \
+                -Dsonar.projectVersion=${BUILD_NUMBER}
+                """
             }
         }
+    }
+}
 
         stage('Quality Gate') {
             steps {
