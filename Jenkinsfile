@@ -144,17 +144,36 @@ pipeline {
 //     }
 // }
 
+        stage('Configure EKS Access') {
+    steps {
+        sh '''
+        export PATH=$PATH:/usr/local/bin
+        aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+        /usr/local/bin/kubectl config current-context
+        '''
+    }
+}
+
         stage('Deploy to EKS') {
             steps {
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
-                    sh '''
-                    aws eks update-kubeconfig --region us-west-1 --name myclusterr
-                    kubectl apply -f deployment.yml
-                    kubectl apply -f service.yml
-                    '''
-                }
+                sh '''
+                aws eks update-kubeconfig --region $AWS_DEFAULT_REGION --name $EKS_CLUSTER
+                kubectl apply -f deployment.yml
+                kubectl apply -f service.yml
+                '''
             }
         }
+        // stage('Deploy to EKS') {
+        //     steps {
+        //         {
+        //             sh '''
+        //             aws eks update-kubeconfig --region us-west-1 --name myclusterr
+        //             kubectl apply -f deployment.yml
+        //             kubectl apply -f service.yml
+        //             '''
+        //         }
+        //     }
+        // }
     }
 
     post {
