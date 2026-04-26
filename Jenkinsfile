@@ -148,7 +148,7 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
                     sh '''
-                    aws eks update-kubeconfig --region us-west-1 --name mycluster
+                    aws eks update-kubeconfig --region us-west-1 --name myclusterr
                     kubectl apply -f deployment.yml
                     kubectl apply -f service.yml
                     '''
