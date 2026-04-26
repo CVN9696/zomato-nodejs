@@ -148,7 +148,7 @@ pipeline {
     steps {
         sh '''
         export PATH=$PATH:/usr/local/bin
-        aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
+        aws eks update-kubeconfig --region us-west-1 --name myclusterr
         /usr/local/bin/kubectl config current-context
         '''
     }
@@ -157,7 +157,7 @@ pipeline {
         stage('Deploy to EKS') {
             steps {
                 sh '''
-                aws eks update-kubeconfig --region us-west-1 --name myclusterr
+                
                 kubectl apply -f deployment.yml
                 kubectl apply -f service.yml
                 '''
@@ -168,6 +168,7 @@ pipeline {
         //         {
         //             sh '''
         //             aws eks update-kubeconfig --region us-west-1 --name myclusterr
+        // aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER
         //             kubectl apply -f deployment.yml
         //             kubectl apply -f service.yml
         //             '''
